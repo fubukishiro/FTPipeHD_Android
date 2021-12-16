@@ -1,0 +1,2 @@
+rootProject.name = "FTPipeHD_Mobile"
+include ':app'
