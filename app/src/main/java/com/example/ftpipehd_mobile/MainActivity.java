@@ -9,20 +9,32 @@ import android.widget.TextView;
 import com.example.ftpipehd_mobile.model.MNISTCNN;
 import com.example.ftpipehd_mobile.utils.General;
 
+import org.deeplearning4j.common.resources.DL4JResources;
+import org.deeplearning4j.common.resources.ResourceType;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
+import org.nd4j.autodiff.listeners.impl.ScoreListener;
+import org.nd4j.autodiff.listeners.records.History;
+import org.nd4j.autodiff.samediff.SDVariable;
 import org.nd4j.autodiff.samediff.SameDiff;
 import org.nd4j.autodiff.samediff.TrainingConfig;
 
 import org.nd4j.autodiff.util.SameDiffUtils;
+import org.nd4j.evaluation.classification.Evaluation;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.layers.ExternalErrorsFunction;
+import org.nd4j.linalg.api.ops.impl.layers.convolution.config.Conv2DConfig;
+import org.nd4j.linalg.api.ops.impl.layers.convolution.config.Pooling2DConfig;
 import org.nd4j.linalg.dataset.api.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.GradientUpdater;
 import org.nd4j.linalg.learning.config.Adam;
+import org.nd4j.weightinit.impl.XavierInitScheme;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -32,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        DL4JResources.setBaseDirectory(new File(getExternalFilesDir(null), ""));
 
         this.trainThread = new Thread(() -> {
             TextView msg = findViewById(R.id.train_message);
@@ -55,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
         SameDiff subModel3 = testSubModel3.simpleMakeSubModel(4, 4);
 
         int batchSize = 256;
+        //File file = new File(getExternalFilesDir(null), "");
+
         DataSetIterator trainData = new MnistDataSetIterator(batchSize, true, 12345);
 
         int iteration = 1;
@@ -111,11 +126,13 @@ public class MainActivity extends AppCompatActivity {
                 int correctNum = General.getCorrectNum(subModel3.getVariable("output").getArr(), subModel3.getVariable("label").getArr());
                 totalCorrectNum += correctNum;
                 totalNum += curBatchSize;
+
                 Log.e("MainActivityTrain", "correctNum: " + correctNum);
 
                 // backward test
                 Map<String, INDArray> grads3 = subModel3.calculateGradients(null, subModel3.getVariables().keySet());
                 testSubModel3.step();
+                Log.e("MainActivityTrain", "subModel3 backward finish ");
 
                 ExternalErrorsFunction fn2 = SameDiffUtils.externalErrors(subModel2, null, subModel2.getVariable("output"));
                 INDArray externalGrad2 = grads3.get("reshapedInput").reshape(-1, 8, 5, 5);
@@ -123,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
                 externalGradMap2.put("output-grad", externalGrad2);
                 Map<String, INDArray> grads2 = subModel2.calculateGradients(externalGradMap2, subModel2.getVariables().keySet());
                 testSubModel2.step();
+                Log.e("MainActivityTrain", "subModel2 backward finish ");
 
                 ExternalErrorsFunction fn1 = SameDiffUtils.externalErrors(subModel, null, subModel.getVariable("output"));
                 INDArray externalGrad = grads2.get("input");
@@ -141,6 +159,5 @@ public class MainActivity extends AppCompatActivity {
             cnt = 0;
             trainData.reset();
         }
-
     }
 }

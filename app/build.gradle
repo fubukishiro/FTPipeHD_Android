@@ -27,9 +27,10 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     packagingOptions {
-        pickFirst 'META-INF/native-image/**'
+        exclude 'META-INF/native-image/**/**.json'
         pickFirst 'nd4j-native.properties'
     }
+
 }
 
 dependencies {
